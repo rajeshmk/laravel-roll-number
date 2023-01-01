@@ -1,6 +1,6 @@
 {
-    "name": "vocolabs/laravel-auto-number",
-    "description": "The Vocolabs AutoNumber package.",
+    "name": "vocolabs/roll-number",
+    "description": "The Vocolabs RollNumber package.",
     "license": "MIT",
     "homepage": "https://voco.in",
     "authors": [
@@ -10,16 +10,26 @@
         }
     ],
     "require": {
-        "php": "^8.1"
+        "php": "^8.1",
+        "laravel/framework": "^9.0",
+        "vocolabs/contracts": "dev-main"
     },
     "autoload": {
         "psr-4": {
-            "Vocolabs\\AutoNumber\\": ""
-        }
+            "Vocolabs\\RollNumber\\": "src/"
+        },
+        "files": [
+            "helper-functions/voco-helpers.php"
+        ]
     },
     "extra": {
         "branch-alias": {
             "dev-master": "1.x-dev"
+        },
+        "laravel": {
+            "providers": [
+                "VocoLabs\\RollNumber\\RollNumberServiceProvider"
+            ]
         }
     },
     "config": {
