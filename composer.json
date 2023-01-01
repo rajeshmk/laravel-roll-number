@@ -1,0 +1,30 @@
+{
+    "name": "vocolabs/laravel-auto-number",
+    "description": "The Vocolabs AutoNumber package.",
+    "license": "MIT",
+    "homepage": "https://voco.in",
+    "authors": [
+        {
+            "name": "Raju Koyilandy",
+            "email": "mkrajesh.kdy@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^8.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Vocolabs\\AutoNumber\\": ""
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.x-dev"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
