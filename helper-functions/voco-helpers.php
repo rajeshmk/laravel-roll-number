@@ -2,12 +2,20 @@
 
 use VocoLabs\RollNumber\Support\NextRollNumber;
 
-function next_reference_code($roll_type)
+/**
+ * @deprecated
+ */
+function next_reference_code($name)
 {
-    return NextRollNumber::get($roll_type);
+    return NextRollNumber::get($name);
 }
 
-function next_roll_number($roll_type)
+function roll_number(string $name, string $custom_prefix = '')
 {
-    return NextRollNumber::get($roll_type);
+    return NextRollNumber::get($name);
+}
+
+function model_roll_number(string $name, string $model_name, int|string $model_id, string $custom_prefix = '')
+{
+    return NextRollNumber::get($name);
 }
