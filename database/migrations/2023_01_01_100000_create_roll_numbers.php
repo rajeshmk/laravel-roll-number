@@ -16,8 +16,7 @@ return new class() extends Migration
         Schema::create('roll_types', function (Blueprint $table) {
             $table->id();
             $table->string('name', 50)->unique();
-            $table->string('model_name', 250)->nullable();
-            $table->string('prefix', 7)->nullable();
+            $table->string('model_class', 250)->nullable();
             $table->timestamps();
         });
 
@@ -29,7 +28,7 @@ return new class() extends Migration
             $table->unsignedBigInteger('rollover_limit')->nullable();
             $table->timestamps();
 
-            $table->uniqid([
+            $table->unique([
                 'type_id',
                 'model_id',
             ]);
