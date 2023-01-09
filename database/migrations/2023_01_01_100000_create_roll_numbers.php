@@ -25,7 +25,6 @@ return new class() extends Migration
             $table->foreignId('type_id')->constrained('roll_types');
             $table->unsignedBigInteger('parent_id')->nullable();
             $table->unsignedBigInteger('next_number');
-            $table->unsignedBigInteger('rollover_limit')->nullable();
             $table->timestamps();
 
             $table->unique([

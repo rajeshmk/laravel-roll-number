@@ -2,6 +2,7 @@
 
 namespace VocoLabs\RollNumber\Traits;
 
+use Illuminate\Support\Str;
 use VocoLabs\RollNumber\Support\NextRollNumber;
 
 trait HasRollNumber
@@ -27,9 +28,9 @@ trait HasRollNumber
 
         $column = is_string($config) ? $config : $config['column'];
 
-        $class_name_snake = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', get_class($entity)));
+        $class_name_snake = str_replace('\\', '', Str::snake(get_class($entity)));
 
-        $roll_number = NextRollNumber::create($class_name_snake . ':' . $column)
+        $roll_number = roll_number($class_name_snake . ':' . Str::snake($column))
             ->prefix($config['prefix'] ?? '');
 
         if (method_exists($entity, 'getRollGroupModelName')) {

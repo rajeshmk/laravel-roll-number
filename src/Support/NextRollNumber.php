@@ -16,6 +16,7 @@ final class NextRollNumber
     private int $zero_padding = 0;
     private string $model_name;
     private int|string $model_id;
+    private int $rollover_limit;
 
     /**
      * PRIVATE constructor
@@ -57,6 +58,15 @@ final class NextRollNumber
         return $this;
     }
 
+    public function rolloverLimit(int $limit): self
+    {
+        if ($limit > 0) {
+            $this->rollover_limit = $limit;
+        }
+
+        return $this;
+    }
+
     public function get(): string
     {
         return $this->withPrefix($this->getNextNumber());
@@ -94,16 +104,26 @@ final class NextRollNumber
             return $this->createRollNumber($type);
         }
 
+        $max_limit = $this->rollover_limit ?? null;
+
         $sql = 'UPDATE `' . DB::getTablePrefix() . 'roll_numbers`'
             . ' SET `next_number` = CASE'
-            . ' WHEN (`rollover_limit` IS NULL OR `rollover_limit` > `next_number`)'
+            . ' WHEN (? IS NULL OR ? > `next_number`)'
             . '   THEN (LAST_INSERT_ID(`next_number`) + 1)'
             . ' ELSE (LAST_INSERT_ID(`next_number`) - `next_number` + 1)'
             . ' END'
             . ' WHERE `type_id` = ? AND `parent_id` '
             . ($this->model_id === null ? ' IS NULL ' : ' = ?');
 
-        $query_params = $this->model_id === null ? [$type->id] : [$type->id, $this->model_id];
+        $query_params = [
+            $max_limit,
+            $max_limit,
+            $type->id,
+        ];
+
+        if ($this->model_id !== null) {
+            $query_params[] = $this->model_id;
+        }
 
         DB::statement($sql, $query_params);
 
