@@ -2,7 +2,6 @@
     "name": "vocolabs/roll-number",
     "description": "The Vocolabs RollNumber package.",
     "license": "MIT",
-    "homepage": "https://voco.in",
     "authors": [
         {
             "name": "Raju Koyilandy",
@@ -16,7 +15,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Vocolabs\\RollNumber\\": "src/"
+            "VocoLabs\\RollNumber\\": "src"
         },
         "files": [
             "helper-functions/voco-helpers.php"

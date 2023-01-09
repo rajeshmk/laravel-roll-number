@@ -8,29 +8,80 @@ use Vocolabs\Contracts\Database\DriverException;
 use VocoLabs\RollNumber\Models\RollNumber;
 use VocoLabs\RollNumber\Models\RollType;
 
+// @TODO - use custom exception class instead of `RuntimeException`
 final class NextRollNumber
 {
+    private string $name;
+    private string $prefix = '';
+    private int $zero_padding = 0;
+    private string $model_name;
+    private int|string $model_id;
+    private int $rollover_limit;
+
     /**
-     * THIS FUNCTION MUST BE CALLED FROM WITHIN A "DB TRANSACTION"
+     * PRIVATE constructor
      */
-    final public static function get(string $name, string $custom_prefix = '')
+    private function __construct(string $name)
     {
-        return self::getNextNumber($name, null, null, $custom_prefix);
+        if (trim($name) === '') {
+            throw new RuntimeException('Name required for the roll number type.');
+        }
+
+        $this->name = trim($name);
     }
 
     /**
      * THIS FUNCTION MUST BE CALLED FROM WITHIN A "DB TRANSACTION"
      */
-    final public static function getForModel(string $name, string $model_name, int|string $model_id, string $custom_prefix = '')
+    final public static function create(string $name): static
     {
-        return self::getNextNumber($name, $model_name, $model_id, $custom_prefix);
+        return static::newInstance(trim($name));
+    }
+
+    public function prefix(string $prefix, int $zero_padding = 0): self
+    {
+        $this->prefix = $prefix;
+        $this->zero_padding = $zero_padding;
+
+        return $this;
+    }
+
+    public function groupBy(string $model, int|string $id): self
+    {
+        if (!class_exists($model)) {
+            throw new RuntimeException('Class `' . $model . '` not found.');
+        }
+
+        $this->model_name = $model;
+        $this->model_id = $id;
+
+        return $this;
+    }
+
+    public function rolloverLimit(int $limit): self
+    {
+        if ($limit > 0) {
+            $this->rollover_limit = $limit;
+        }
+
+        return $this;
+    }
+
+    public function get(): string
+    {
+        return $this->withPrefix($this->getNextNumber());
     }
 
     // -------------------------------------------------------------------------
     // Private functions
     // -------------------------------------------------------------------------
 
-    private static function getNextNumber(string $name, ?string $model_name, mixed $model_id, string $custom_prefix)
+    private static function newInstance(string $name): static
+    {
+        return new static($name);
+    }
+
+    private function getNextNumber(): int
     {
         // Get PDO instance
         $connection = DB::getPdo();
@@ -39,68 +90,84 @@ final class NextRollNumber
             throw new DriverException('Database transaction not yet initiated');
         }
 
-        $type = RollType::where('name', $name)->where('model_name', $model_name)->first();
+        $type = RollType::where('name', $this->name)->where('parent_model', $this->model_name)->first();
 
         if (null === $type) {
-            $type = self::createRollTYpe($name, $model_name);
+            $type = $this->createRollTYpe();
 
-            return self::createRollNumber($type, $model_id, $custom_prefix);
+            return $this->createRollNumber($type);
         }
 
-        $number = RollNumber::where('type_id', $type->id)->where('model_id', $model_id)->first();
+        $number = RollNumber::where('type_id', $type->id)->where('parent_id', $this->model_id)->first();
 
         if (null === $number) {
-            return self::createRollNumber($type, $model_id, $custom_prefix);
+            return $this->createRollNumber($type);
         }
 
+        $max_limit = $this->rollover_limit ?? null;
+
         $sql = 'UPDATE `' . DB::getTablePrefix() . 'roll_numbers`'
-            . ' SET `next_number` = CASE'
-            . ' WHEN (`rollover_limit` IS NULL OR `rollover_limit` > `next_number`)'
+            . ' SET `updated_at` = ?,'
+            . ' `next_number` = CASE'
+            . ' WHEN (? IS NULL OR ? > `next_number`)'
             . '   THEN (LAST_INSERT_ID(`next_number`) + 1)'
             . ' ELSE (LAST_INSERT_ID(`next_number`) - `next_number` + 1)'
             . ' END'
-            . ' WHERE `type_id` = ? AND `model_id` = ?';
+            . ' WHERE `type_id` = ? AND `parent_id` '
+            . ($this->model_id === null ? ' IS NULL ' : ' = ?');
 
-        DB::statement($sql, [$type->id, $model_id]);
+        $query_params = [
+            date('Y-m-d H:i:s'),
+            $max_limit,
+            $max_limit,
+            $type->id,
+        ];
+
+        if ($this->model_id !== null) {
+            $query_params[] = $this->model_id;
+        }
+
+        DB::statement($sql, $query_params);
 
         // Get roll number as LAST_INSERT_ID()
         $next_number = DB::getPdo()->lastInsertId();
 
         if (empty($next_number)) {
-            // @TODO - use custom exception class
-            throw new RuntimeException('Could not generate roll number');
+            throw new RuntimeException('Could not generate roll number.');
         }
 
-        return self::prefixedNumber($next_number, $custom_prefix);
+        return $next_number;
     }
 
-    private static function createRollTYpe(string $name, string $model_name): RollType
+    private function createRollTYpe(): RollType
     {
         $type = new RollType();
-        $type->name = $name;
-        $type->model_name = $model_name;
+        $type->name = $this->name;
+        $type->parent_model = $this->model_name ?? null;
 
         $type->save();
 
         return $type;
     }
 
-    private static function createRollNumber(RollType $type, mixed $model_id, string $custom_prefix): int
+    private function createRollNumber(RollType $type): int
     {
+        if ($this->model_id && !$type->parent_model) {
+            throw new RuntimeException('Model class should be specified in order to get model based roll number.');
+        }
+
         $number = new RollNumber();
-        $number->type_id = $type;
-        $number->model_id = $model_id;
-        $number->next_number = 1;
+        $number->type_id = $type->id;
+        $number->parent_id = $this->model_id;
+        $number->next_number = 2;
 
         $number->save();
 
-        return self::prefixedNumber(1, $custom_prefix);
+        return 1;
     }
 
-    private static function prefixedNumber(int $number, string $custom_prefix)
+    private function withPrefix(int $number): string
     {
-        return empty($custom_prefix) ?
-            $number :
-            $custom_prefix . str_pad($number, 3, '0', STR_PAD_LEFT);
+        return $this->prefix . str_pad($number, $this->zero_padding, '0', STR_PAD_LEFT);
     }
 }
