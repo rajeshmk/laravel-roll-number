@@ -3,7 +3,6 @@
 namespace VocoLabs\RollNumber\Traits;
 
 use Illuminate\Support\Str;
-use VocoLabs\RollNumber\Support\NextRollNumber;
 
 trait HasRollNumber
 {

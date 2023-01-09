@@ -107,7 +107,8 @@ final class NextRollNumber
         $max_limit = $this->rollover_limit ?? null;
 
         $sql = 'UPDATE `' . DB::getTablePrefix() . 'roll_numbers`'
-            . ' SET `next_number` = CASE'
+            . ' SET `updated_at` = ?,'
+            . ' `next_number` = CASE'
             . ' WHEN (? IS NULL OR ? > `next_number`)'
             . '   THEN (LAST_INSERT_ID(`next_number`) + 1)'
             . ' ELSE (LAST_INSERT_ID(`next_number`) - `next_number` + 1)'
@@ -116,6 +117,7 @@ final class NextRollNumber
             . ($this->model_id === null ? ' IS NULL ' : ' = ?');
 
         $query_params = [
+            date('Y-m-d H:i:s'),
             $max_limit,
             $max_limit,
             $type->id,
