@@ -16,21 +16,21 @@ return new class() extends Migration
         Schema::create('roll_types', function (Blueprint $table) {
             $table->id();
             $table->string('name', 50)->unique();
-            $table->string('model_class', 250)->nullable();
+            $table->string('parent_model', 250)->nullable();
             $table->timestamps();
         });
 
         Schema::create('roll_numbers', function (Blueprint $table) {
             $table->id();
             $table->foreignId('type_id')->constrained('roll_types');
-            $table->unsignedBigInteger('model_id')->nullable();
+            $table->unsignedBigInteger('parent_id')->nullable();
             $table->unsignedBigInteger('next_number');
             $table->unsignedBigInteger('rollover_limit')->nullable();
             $table->timestamps();
 
             $table->unique([
                 'type_id',
-                'model_id',
+                'parent_id',
             ]);
         });
     }
