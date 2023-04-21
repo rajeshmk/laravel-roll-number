@@ -12,10 +12,15 @@ use VocoLabs\RollNumber\Models\RollType;
 final class NextRollNumber
 {
     private string $name;
+
     private string $prefix = '';
+
     private int $zero_padding = 0;
+
     private string $model_name;
+
     private int|string $model_id;
+
     private int $rollover_limit;
 
     /**
@@ -48,8 +53,8 @@ final class NextRollNumber
 
     public function groupBy(string $model, int|string $id): self
     {
-        if (!class_exists($model)) {
-            throw new RuntimeException('Class `' . $model . '` not found.');
+        if (! class_exists($model)) {
+            throw new RuntimeException('Class `'.$model.'` not found.');
         }
 
         $this->model_name = $model;
@@ -106,15 +111,15 @@ final class NextRollNumber
 
         $max_limit = $this->rollover_limit ?? null;
 
-        $sql = 'UPDATE `' . DB::getTablePrefix() . 'roll_numbers`'
-            . ' SET `updated_at` = ?,'
-            . ' `next_number` = CASE'
-            . ' WHEN (? IS NULL OR ? > `next_number`)'
-            . '   THEN (LAST_INSERT_ID(`next_number`) + 1)'
-            . ' ELSE (LAST_INSERT_ID(`next_number`) - `next_number` + 1)'
-            . ' END'
-            . ' WHERE `type_id` = ? AND `parent_id` '
-            . ($this->model_id === null ? ' IS NULL ' : ' = ?');
+        $sql = 'UPDATE `'.DB::getTablePrefix().'roll_numbers`'
+            .' SET `updated_at` = ?,'
+            .' `next_number` = CASE'
+            .' WHEN (? IS NULL OR ? > `next_number`)'
+            .'   THEN (LAST_INSERT_ID(`next_number`) + 1)'
+            .' ELSE (LAST_INSERT_ID(`next_number`) - `next_number` + 1)'
+            .' END'
+            .' WHERE `type_id` = ? AND `parent_id` '
+            .($this->model_id === null ? ' IS NULL ' : ' = ?');
 
         $query_params = [
             date('Y-m-d H:i:s'),
@@ -152,7 +157,7 @@ final class NextRollNumber
 
     private function createRollNumber(RollType $type): int
     {
-        if ($this->model_id && !$type->parent_model) {
+        if ($this->model_id && ! $type->parent_model) {
             throw new RuntimeException('Model class should be specified in order to get model based roll number.');
         }
 
@@ -168,6 +173,6 @@ final class NextRollNumber
 
     private function withPrefix(int $number): string
     {
-        return $this->prefix . str_pad($number, $this->zero_padding, '0', STR_PAD_LEFT);
+        return $this->prefix.str_pad($number, $this->zero_padding, '0', STR_PAD_LEFT);
     }
 }

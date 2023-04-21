@@ -29,7 +29,7 @@ trait HasRollNumber
 
         $class_name_snake = str_replace('\\', '', Str::snake(get_class($entity)));
 
-        $roll_number = roll_number($class_name_snake . ':' . Str::snake($column))
+        $roll_number = roll_number($class_name_snake.':'.Str::snake($column))
             ->prefix($config['prefix'] ?? '');
 
         if (method_exists($entity, 'getRollGroupModelName')) {
