@@ -29,7 +29,7 @@ final class NextRollNumber
     private function __construct(string $name)
     {
         if (trim($name) === '') {
-            throw new RuntimeException('Name required for the roll number type.');
+            throw new RuntimeException(__('Name required for the roll number type.'));
         }
 
         $this->name = trim($name);
@@ -54,7 +54,7 @@ final class NextRollNumber
     public function groupBy(string $model, int|string $id): self
     {
         if (! class_exists($model)) {
-            throw new RuntimeException('Class `'.$model.'` not found.');
+            throw new RuntimeException(__('Class `'.$model.'` not found.'));
         }
 
         $this->model_name = $model;
@@ -77,6 +77,16 @@ final class NextRollNumber
         return $this->withPrefix($this->getNextNumber());
     }
 
+    public function groupingModel(): ?string
+    {
+        return $this->model_name ?? null;
+    }
+
+    public function groupingId(): int|string|null
+    {
+        return $this->model_id ?? null;
+    }
+
     // -------------------------------------------------------------------------
     // Private functions
     // -------------------------------------------------------------------------
@@ -92,10 +102,10 @@ final class NextRollNumber
         $connection = DB::getPdo();
 
         if ($connection instanceof \PDO && true !== $connection->inTransaction()) {
-            throw new DriverException('Database transaction not yet initiated');
+            throw new DriverException(__('Database transaction not yet initiated.'));
         }
 
-        $type = RollType::where('name', $this->name)->where('parent_model', $this->model_name)->first();
+        $type = RollType::where('name', $this->name)->where('grouping_model', $this->groupingModel())->first();
 
         if (null === $type) {
             $type = $this->createRollTYpe();
@@ -103,7 +113,7 @@ final class NextRollNumber
             return $this->createRollNumber($type);
         }
 
-        $number = RollNumber::where('type_id', $type->id)->where('parent_id', $this->model_id)->first();
+        $number = RollNumber::where('type_id', $type->id)->where('grouping_id', $this->groupingId())->first();
 
         if (null === $number) {
             return $this->createRollNumber($type);
@@ -118,8 +128,8 @@ final class NextRollNumber
             .'   THEN (LAST_INSERT_ID(`next_number`) + 1)'
             .' ELSE (LAST_INSERT_ID(`next_number`) - `next_number` + 1)'
             .' END'
-            .' WHERE `type_id` = ? AND `parent_id` '
-            .($this->model_id === null ? ' IS NULL ' : ' = ?');
+            .' WHERE `type_id` = ? AND `grouping_id` '
+            .($this->groupingId() === null ? ' IS NULL ' : ' = ?');
 
         $query_params = [
             date('Y-m-d H:i:s'),
@@ -128,8 +138,8 @@ final class NextRollNumber
             $type->id,
         ];
 
-        if ($this->model_id !== null) {
-            $query_params[] = $this->model_id;
+        if ($this->groupingId() !== null) {
+            $query_params[] = $this->groupingId();
         }
 
         DB::statement($sql, $query_params);
@@ -138,7 +148,7 @@ final class NextRollNumber
         $next_number = DB::getPdo()->lastInsertId();
 
         if (empty($next_number)) {
-            throw new RuntimeException('Could not generate roll number.');
+            throw new RuntimeException(__('Could not generate roll number.'));
         }
 
         return $next_number;
@@ -148,7 +158,7 @@ final class NextRollNumber
     {
         $type = new RollType();
         $type->name = $this->name;
-        $type->parent_model = $this->model_name ?? null;
+        $type->grouping_model = $this->groupingModel();
 
         $type->save();
 
@@ -157,13 +167,13 @@ final class NextRollNumber
 
     private function createRollNumber(RollType $type): int
     {
-        if ($this->model_id && ! $type->parent_model) {
-            throw new RuntimeException('Model class should be specified in order to get model based roll number.');
+        if ($this->groupingId() && ! $type->grouping_model) {
+            throw new RuntimeException(__('Model class should be specified in order to generate model based roll number.'));
         }
 
         $number = new RollNumber();
         $number->type_id = $type->id;
-        $number->parent_id = $this->model_id;
+        $number->grouping_id = $this->groupingId();
         $number->next_number = 2;
 
         $number->save();
